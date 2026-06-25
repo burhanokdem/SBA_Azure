@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBA Bulut Geometri Hesaplayıcı</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        label { display: block; margin: 15px 0 5px; font-weight: 600; color: #555; }
+        select, input, button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #005a9e; }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e7f3ff;
+            border-left: 5px solid #0078d4;
+            border-radius: 4px;
+            display: none;
+            font-weight: 500;
+            color: #004b87;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Geometri Hesaplayıcı</h2>
+    
+    <label for="shape">Şekil Seçin:</label>
+    <select id="shape" onchange="toggleInputs()">
+        <option value="square">Kare</option>
+        <option value="rectangle">Dikdörtgen</option>
+        <option value="circle">Daire</option>
+    </select>
+
+    <label id="lbl1" for="val1">Kenar Uzunluğu / Yarıçap:</label>
+    <input type="number" id="val1" placeholder="Değer girin" min="0">
+
+    <label id="lbl2" for="val2" style="display:none;">İkinci Kenar (Dikdörtgen için):</label>
+    <input type="number" id="val2" placeholder="Değer girin" min="0" style="display:none;">
+
+    <button onclick="calculate()">Hesapla (Azure API)</button>
+
+    <div id="result" class="result-box"></div>
+</div>
+
+<script>
+    // Şekil değiştiğinde input alanlarını gizle/göster yapıyoruz
+    function toggleInputs() {
+        const shape = document.getElementById('shape').value;
+        const lbl1 = document.getElementById('lbl1');
+        const lbl2 = document.getElementById('lbl2');
+        const val2 = document.getElementById('val2');
+
+        if (shape === 'square') {
+            lbl1.innerText = 'Kenar Uzunluğu:';
+            lbl2.style.display = 'none';
+            val2.style.display = 'none';
+        } else if (shape === 'rectangle') {
+            lbl1.innerText = 'Kısa Kenar:';
+            lbl2.style.display = 'block';
+            val2.style.display = 'block';
+        } else if (shape === 'circle') {
+            lbl1.innerText = 'Yarıçap (r):';
+            lbl2.style.display = 'none';
+            val2.style.display = 'none';
+        }
+    }
+
+    // Azure Function backend sistemimize istek atan ana fonksiyon
+    async function calculate() {
+        const shape = document.getElementById('shape').value;
+        const value1 = document.getElementById('val1').value;
+        const value2 = document.getElementById('val2').value;
+        const resultBox = document.getElementById('result');
+
+        // Şimdilik test için local adresimizi yazıyoruz, Azure'a yükleyince burayı canlı link ile değiştireceğiz!
+        const apiUrl = 'http://localhost:7071/api/CalculateArea';
+
+        if (!value1) {
+            alert('Lütfen gerekli alanları doldurun!');
+            return;
+        }
+
+        try {
+            resultBox.style.display = 'block';
+            resultBox.innerText = 'Hesaplanıyor...';
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    shape: shape,
+                    value1: value1,
+                    value2: value2
+                })
+            });
+
+            const data = await response.get_json ? await response.get_json() : await response.json();
+            
+            if (response.ok) {
+                resultBox.innerText = data.message;
+            } else {
+                resultBox.innerText = 'Hata: ' + (data.error || 'İşlem başarısız.');
+            }
+        } catch (error) {
+            resultBox.innerText = 'Backend bağlantı hatası! (Azure Function henüz çalışmıyor olabilir)';
+        }
+    }
+</script>
+
+</body>
+</html>
